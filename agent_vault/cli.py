@@ -117,7 +117,11 @@ def build(output):
     console.print(f"[bold green][+] Knowledge Graph Compiled![/bold green] ({graph_res.get('nodes', 0)} nodes, {graph_res.get('edges', 0)} edges)")
     html_file = vault_dir / "graphify-out" / "graph.html"
     if html_file.exists():
-        console.print(f"[green][+] Interactive visualizer saved:[/green] [cyan]{html_file}[/cyan]")
+        console.print(f"[green][+] Interactive 3D visualizer saved:[/green] [cyan]{html_file}[/cyan]")
+    else:
+        console.print("[yellow][!] Graphify was not detected to compile graph.html.[/yellow]")
+        console.print("    Please install Graphify: [bold cyan]uv tool install graphifyy[/bold cyan] (or [bold cyan]pip install graphifyy[/bold cyan])")
+        console.print("    Then re-run: [bold]agent-vault build[/bold]")
     console.print(f"\n[cyan]Tip: Run [bold]agent-vault view[/bold] to open your interactive graph in the browser.[/cyan]")
 
 @main.command()
@@ -129,9 +133,9 @@ def view(dir):
     html_file = out_dir / "graph.html"
 
     if not html_file.exists():
-        # Auto-heal: Check if vault exists and build visualizer on the fly
+        # Check if vault exists and build visualizer via Graphify
         if (out_dir / "graph.json").exists() or any(vault_dir.glob("conv_*.md")):
-            console.print("[yellow]graph.html not found, generating visualizer from existing vault data...[/yellow]")
+            console.print("[yellow]graph.html not found, compiling visualizer with Graphify...[/yellow]")
             build_knowledge_graph(vault_dir, out_dir)
         else:
             console.print(f"[red]No vault data found in {vault_dir}.[/red]")
@@ -139,7 +143,9 @@ def view(dir):
             return
 
     if not html_file.exists():
-        console.print(f"[red]Could not locate or generate {html_file}. Please run 'agent-vault build'.[/red]")
+        console.print(f"[red]Graphify is required to generate the interactive graph visualizer.[/red]")
+        console.print("Please install Graphify: [bold cyan]uv tool install graphifyy[/bold cyan] (or [bold cyan]pip install graphifyy[/bold cyan])")
+        console.print("Then run: [bold]agent-vault build[/bold]")
         return
 
     console.print(f"[green]Opening Knowledge Graph in your browser:[/green] [cyan]{html_file}[/cyan]")

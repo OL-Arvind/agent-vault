@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-vault"
-version = "0.1.1"
+version = "0.1.2"
 description = "Turn local AI coding agent sessions into a queryable knowledge graph and searchable second brain."
 readme = "README.md"
 requires-python = ">=3.10"

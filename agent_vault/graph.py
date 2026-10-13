@@ -117,216 +117,53 @@ def extract_nodes_and_edges(vault_dir: Path, concepts: List[str] = None) -> Dict
     }
 
 def find_graphify_executable() -> Path | None:
-    """Finds graphify executable in PATH or via uv tools."""
+    """Finds graphify executable in PATH, active Python environment, or uv tool directories."""
+    # 1. System PATH
     cmd = shutil.which("graphify")
     if cmd:
         return Path(cmd)
     
-    # Check uv tools on Windows
+    # 2. Same environment as running python interpreter
+    bin_name = "graphify.exe" if sys.platform == "win32" else "graphify"
+    py_dir = Path(sys.executable).parent
+    env_candidate = py_dir / bin_name
+    if env_candidate.exists():
+        return env_candidate
+    
+    for sub in ["Scripts", "bin"]:
+        sub_candidate = py_dir / sub / bin_name
+        if sub_candidate.exists():
+            return sub_candidate
+
+    # 3. Standard uv tools location
     home = Path.home()
-    uv_candidate = home / "AppData" / "Roaming" / "uv" / "tools" / "graphifyy" / "Scripts" / "graphify.exe"
-    if uv_candidate.exists():
-        return uv_candidate
+    if sys.platform == "win32":
+        candidates = [
+            home / "AppData" / "Roaming" / "uv" / "tools" / "graphifyy" / "Scripts" / "graphify.exe",
+            home / ".local" / "bin" / "graphify.exe",
+        ]
+    else:
+        candidates = [
+            home / ".local" / "bin" / "graphify",
+            home / ".cargo" / "bin" / "graphify",
+        ]
+    for c in candidates:
+        if c.exists():
+            return c
         
     return None
 
-def generate_standalone_html(out_dir: Path, nodes: list, edges: list):
-    """Generates an embedded interactive D3.js knowledge graph visualizer."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    html_path = out_dir / "graph.html"
-    
-    # Cap displayed nodes to 1000 for smooth browser rendering if very large
-    display_nodes = nodes[:1000]
-    node_id_set = {n["id"] for n in display_nodes}
-    display_edges = [
-        {"source": e["source"], "target": e["target"], "relation": e.get("relation", "relates")}
-        for e in edges if e["source"] in node_id_set and e["target"] in node_id_set
-    ]
-
-    graph_data_json = json.dumps({"nodes": display_nodes, "links": display_edges}, ensure_ascii=False)
-
-    html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Agent-Vault Knowledge Graph</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{ background: #0f1117; color: #e1e4ea; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }}
-    #header {{ position: absolute; top: 16px; left: 20px; z-index: 10; background: rgba(22, 27, 34, 0.85); backdrop-filter: blur(8px); padding: 12px 20px; border-radius: 12px; border: 1px solid #30363d; display: flex; align-items: center; gap: 16px; }}
-    #header h1 {{ font-size: 16px; font-weight: 600; color: #58a6ff; letter-spacing: -0.3px; }}
-    #header .stats {{ font-size: 13px; color: #8b949e; }}
-    #search {{ background: #0d1117; border: 1px solid #30363d; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 13px; outline: none; width: 220px; }}
-    #search:focus {{ border-color: #58a6ff; }}
-    #sidebar {{ position: absolute; top: 16px; right: 20px; width: 340px; max-height: calc(100vh - 32px); overflow-y: auto; background: rgba(22, 27, 34, 0.95); backdrop-filter: blur(10px); padding: 20px; border-radius: 12px; border: 1px solid #30363d; display: none; z-index: 10; font-size: 13px; }}
-    #sidebar h3 {{ font-size: 15px; margin-bottom: 8px; color: #58a6ff; word-break: break-word; }}
-    #sidebar .type {{ display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-bottom: 12px; }}
-    #sidebar .meta {{ color: #8b949e; margin-bottom: 6px; }}
-    #sidebar .path {{ word-break: break-all; font-family: monospace; font-size: 11px; color: #79c0ff; background: #0d1117; padding: 6px; border-radius: 6px; }}
-    #sidebar button {{ margin-top: 12px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 4px 10px; border-radius: 6px; cursor: pointer; }}
-    #sidebar button:hover {{ background: #30363d; }}
-    svg {{ width: 100vw; height: 100vh; cursor: grab; }}
-    svg:active {{ cursor: grabbing; }}
-    .link {{ stroke: #30363d; stroke-opacity: 0.6; stroke-width: 1px; }}
-    .node {{ stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: r 0.2s; }}
-    .node:hover {{ stroke-width: 3px; stroke: #58a6ff; }}
-    .node-label {{ fill: #c9d1d9; font-size: 10px; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }}
-  </style>
-</head>
-<body>
-  <div id="header">
-    <h1>Agent-Vault</h1>
-    <div class="stats"><span id="node-count">0</span> nodes &middot; <span id="link-count">0</span> connections</div>
-    <input id="search" type="text" placeholder="Filter nodes..." />
-  </div>
-
-  <div id="sidebar">
-    <h3 id="side-title">Node Title</h3>
-    <span id="side-type" class="type">document</span>
-    <div class="meta" id="side-id">ID: conv_...</div>
-    <div class="path" id="side-file">file/path...</div>
-    <button onclick="document.getElementById('sidebar').style.display='none'">Close</button>
-  </div>
-
-  <svg id="canvas"></svg>
-
-  <script>
-    const data = {graph_data_json};
-    document.getElementById("node-count").innerText = data.nodes.length;
-    document.getElementById("link-count").innerText = data.links.length;
-
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    const colorMap = {{
-      document: "#a371f7",
-      code: "#58a6ff",
-      concept: "#3fb950"
-    }};
-
-    const svg = d3.select("#canvas")
-      .attr("viewBox", [0, 0, width, height]);
-
-    const g = svg.append("g");
-
-    const zoom = d3.zoom()
-      .scaleExtent([0.1, 8])
-      .on("zoom", (e) => g.attr("transform", e.transform));
-
-    svg.call(zoom);
-
-    const simulation = d3.forceSimulation(data.nodes)
-      .force("link", d3.forceLink(data.links).id(d => d.id).distance(60))
-      .force("charge", d3.forceManyBody().strength(-120))
-      .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collision", d3.forceCollide().radius(14));
-
-    const link = g.append("g")
-      .selectAll("line")
-      .data(data.links)
-      .join("line")
-      .attr("class", "link");
-
-    const node = g.append("g")
-      .selectAll("circle")
-      .data(data.nodes)
-      .join("circle")
-      .attr("class", "node")
-      .attr("r", d => d.file_type === "concept" ? 8 : (d.file_type === "code" ? 5 : 7))
-      .attr("fill", d => colorMap[d.file_type] || "#8b949e")
-      .call(d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended))
-      .on("click", (e, d) => selectNode(d));
-
-    const label = g.append("g")
-      .selectAll("text")
-      .data(data.nodes)
-      .join("text")
-      .attr("class", "node-label")
-      .attr("dx", 10)
-      .attr("dy", 3)
-      .text(d => d.label.length > 25 ? d.label.slice(0, 25) + "..." : d.label);
-
-    simulation.on("tick", () => {{
-      link
-        .attr("x1", d => d.source.x)
-        .attr("y1", d => d.source.y)
-        .attr("x2", d => d.target.x)
-        .attr("y2", d => d.target.y);
-
-      node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
-
-      label
-        .attr("x", d => d.x)
-        .attr("y", d => d.y);
-    }});
-
-    function selectNode(d) {{
-      const sb = document.getElementById("sidebar");
-      sb.style.display = "block";
-      document.getElementById("side-title").innerText = d.label;
-      const typeSpan = document.getElementById("side-type");
-      typeSpan.innerText = d.file_type;
-      typeSpan.style.background = (colorMap[d.file_type] || "#8b949e") + "33";
-      typeSpan.style.color = colorMap[d.file_type] || "#8b949e";
-      document.getElementById("side-id").innerText = "ID: " + d.id;
-      document.getElementById("side-file").innerText = d.source_file || "N/A";
-    }}
-
-    document.getElementById("search").addEventListener("input", (e) => {{
-      const val = e.target.value.toLowerCase();
-      node.style("opacity", d => (d.label.toLowerCase().includes(val) || d.id.includes(val)) ? 1 : 0.15);
-      label.style("opacity", d => d.label.toLowerCase().includes(val) ? 1 : 0.15);
-    }});
-
-    function dragstarted(event) {{
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      event.subject.fx = event.subject.x;
-      event.subject.fy = event.subject.y;
-    }}
-    function dragged(event) {{
-      event.subject.fx = event.x;
-      event.subject.fy = event.y;
-    }}
-    function dragended(event) {{
-      if (!event.active) simulation.alphaTarget(0);
-      event.subject.fx = null;
-      event.subject.fy = null;
-    }}
-  </script>
-</body>
-</html>
-"""
-    html_path.write_text(html_content, encoding="utf-8")
-
-def export_html(vault_dir: Path, out_dir: Path, nodes: list = None, edges: list = None):
-    """Generates graph.html either via Graphify CLI or through the standalone D3 fallback."""
-    # 1. Try Graphify CLI export first
+def export_html(vault_dir: Path, out_dir: Path) -> bool:
+    """Invokes Graphify CLI to export the native interactive 3D graph.html."""
     graphify_bin = find_graphify_executable()
-    if graphify_bin:
-        try:
-            subprocess.run([str(graphify_bin), "export", "html"], cwd=str(vault_dir), capture_output=True)
-            if (out_dir / "graph.html").exists():
-                return
-        except Exception:
-            pass
-
-    # 2. Generate standalone interactive D3 HTML visualizer
-    if nodes is not None and edges is not None:
-        generate_standalone_html(out_dir, nodes, edges)
-    elif (out_dir / "graph.json").exists():
-        try:
-            raw_data = json.loads((out_dir / "graph.json").read_text(encoding="utf-8"))
-            loaded_nodes = raw_data.get("nodes", [])
-            loaded_edges = raw_data.get("edges", raw_data.get("links", []))
-            generate_standalone_html(out_dir, loaded_nodes, loaded_edges)
-        except Exception:
-            pass
+    if not graphify_bin:
+        return False
+    
+    try:
+        subprocess.run([str(graphify_bin), "export", "html"], cwd=str(vault_dir), capture_output=True, text=True)
+        return (out_dir / "graph.html").exists()
+    except Exception:
+        return False
 
 def build_knowledge_graph(vault_dir: Path, out_dir: Path = None) -> Dict[str, Any]:
     """Compiles extracted nodes/edges into graphify-out artifacts."""
@@ -373,8 +210,8 @@ def build_knowledge_graph(vault_dir: Path, out_dir: Path = None) -> Dict[str, An
         (out_dir / "GRAPH_REPORT.md").write_text(report, encoding="utf-8")
         to_json(G, communities, str(out_dir / "graph.json"), community_labels=labels)
 
-        # Export HTML
-        export_html(vault_dir, out_dir, nodes, edges)
+        # Export HTML via Graphify
+        export_html(vault_dir, out_dir)
 
         return {
             "nodes": G.number_of_nodes(),
@@ -383,19 +220,19 @@ def build_knowledge_graph(vault_dir: Path, out_dir: Path = None) -> Dict[str, An
             "status": "success"
         }
     except ImportError:
-        # Fallback: simple graph.json output + D3 HTML visualizer
+        # Save graph.json
         graph_json = {
             "nodes": nodes,
             "edges": edges
         }
         (out_dir / "graph.json").write_text(json.dumps(graph_json, indent=2), encoding="utf-8")
         
-        # Always export HTML even without python graphify library
-        export_html(vault_dir, out_dir, nodes, edges)
+        # Export HTML via Graphify CLI
+        exported = export_html(vault_dir, out_dir)
 
         return {
             "nodes": len(nodes),
             "edges": len(edges),
             "communities": 0,
-            "status": "fallback_no_graphify"
+            "status": "success" if exported else "missing_graphify"
         }

@@ -85,7 +85,17 @@ Before installing Agent-Vault, ensure your system meets the following requiremen
   python --version
   ```
 
-### 3. Package Manager (Recommended)
+### 3. Graphify CLI (Knowledge Graph & 3D Visualizer Engine)
+Agent-Vault uses **Graphify** (`graphifyy`) to detect community clusters, analyze surprising connections, and render the interactive 3D knowledge graph visualizer (`graph.html`):
+```bash
+# Install Graphify globally via uv (Recommended)
+uv tool install graphifyy
+
+# Or install via pip
+pip install graphifyy
+```
+
+### 4. Package Manager (Recommended)
 * **[uv](https://github.com/astral-sh/uv)** (strongly recommended for 10-100x faster execution and automatic venv management):
   ```bash
   # Install uv (Windows)
@@ -96,7 +106,7 @@ Before installing Agent-Vault, ensure your system meets the following requiremen
   ```
 * Standard `pip` and virtual environments (`venv`) are also fully supported.
 
-### 4. AI Agent Sessions Installed
+### 5. AI Agent Sessions Installed
 Agent-Vault requires at least one supported AI agent surface with past conversation history on disk:
 * **Google Antigravity:**
   * **Desktop App:** `~/.gemini/antigravity/brain`
@@ -105,7 +115,7 @@ Agent-Vault requires at least one supported AI agent surface with past conversat
   *(On Windows, `~` corresponds to `C:\Users\<YourUsername>`)*
 * *(Optional)* If your agent sessions are in a non-standard directory, you can set the `ANTIGRAVITY_BRAIN_DIR` environment variable.
 
-### 5. Hardware & Web Browser
+### 6. Hardware & Web Browser
 * **RAM:** Minimum 2 GB of available RAM.
 * **Disk Space:** ~50–100 MB of free storage (vault markdown files and graph artifacts are very compact).
 * **Web Browser:** Any modern browser with WebGL enabled (Google Chrome, Microsoft Edge, Brave, Firefox, or Safari) to render the interactive 2D/3D knowledge graph visualizer (`graph.html`).
