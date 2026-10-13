@@ -216,6 +216,70 @@ def show(conv_id, open_editor):
     console.print(Markdown(md_text))
 
 @main.command()
+@click.argument("query", nargs=-1, required=True)
+@click.option("--provider", "-p", default=None, help="LLM Provider (gemini, groq, openai, anthropic, ollama, deepseek).")
+@click.option("--model", "-m", default=None, help="Model name override.")
+@click.option("--key", "-k", default=None, help="API key override.")
+@click.option("--limit", "-l", default=5, help="Number of session cards to analyze.")
+def ask(query, provider, model, key, limit):
+    """Ask your vault natural-language questions and synthesize AI insights from past sessions."""
+    query_str = " ".join(query).strip()
+
+    from agent_vault.ask import synthesize_vault_answer, detect_provider
+    from rich.markdown import Markdown
+
+    # Check if a provider is configured
+    det_prov, det_key, det_model = detect_provider()
+    active_prov = provider or det_prov
+    active_key = key or det_key
+
+    if not active_prov or not active_key:
+        console.print(Panel.fit(
+            "[bold yellow]Direct Terminal AI: No Provider Key Configured[/bold yellow]\n\n"
+            "You have two ways to get AI answers from your vault:\n\n"
+            "[bold cyan]Option 1: Use MCP with Your Existing AI Agents (Zero API Cost)[/bold cyan]\n"
+            "Agent-Vault works out-of-the-box with any agent (Antigravity, Cursor, Claude Code, Meta Muse).\n"
+            "Just add Agent-Vault to your agent's MCP config: [dim]`agent-vault mcp`[/dim]\n"
+            "Then ask your agent directly in chat: [italic]'Search my vault for repeated patterns'[/italic]\n\n"
+            "[bold cyan]Option 2: Bring Your Own API Key in the Terminal[/bold cyan]\n"
+            "Set an environment variable and rerun this command:\n"
+            "  • [bold green]Google Gemini (Free tier):[/bold green]  $env:GEMINI_API_KEY = \"AIza...\"\n"
+            "  • [bold green]Groq (Free & Ultra Fast):[/bold green]   $env:GROQ_API_KEY = \"gsk_...\"\n"
+            "  • [bold green]OpenAI:[/bold green]                    $env:OPENAI_API_KEY = \"sk-...\"\n"
+            "  • [bold green]Anthropic:[/bold green]                 $env:ANTHROPIC_API_KEY = \"sk-ant-...\"\n"
+            "  • [bold green]Local Ollama (100% Offline):[/bold green] Run 'ollama serve' (http://localhost:11434)",
+            border_style="yellow"
+        ))
+        return
+
+    with console.status(f"[bold cyan]Searching vault & synthesizing insights with {active_prov}...[/bold cyan]"):
+        res = synthesize_vault_answer(
+            query=query_str,
+            limit=limit,
+            provider=provider,
+            api_key=key,
+            model=model
+        )
+
+    if res["status"] == "no_matches":
+        console.print(f"[yellow]{res['answer']}[/yellow]")
+        return
+    elif res["status"] == "error":
+        console.print(f"[red]Error calling {res.get('provider')}: {res.get('error')}[/red]")
+        return
+
+    console.print(Panel(
+        f"[bold green]Agent-Vault Synthesis[/bold green] [dim]({res['provider']} &bull; {res['model']})[/dim]",
+        border_style="green"
+    ))
+    console.print(Markdown(res["answer"]))
+
+    if res.get("sources"):
+        console.print("\n[dim]Sources Consulted:[/dim]")
+        for s in res["sources"]:
+            console.print(f"  [dim]&bull; [{s['date'][:10]}] [cyan]{s['title'][:40]}[/cyan] (`agent-vault show {s['id'][:8]}`)[/dim]")
+
+@main.command()
 def mcp():
     """Start the Model Context Protocol (MCP) server for AI agents."""
     console.print("[bold green]Starting Agent-Vault MCP stdio server...[/bold green]")

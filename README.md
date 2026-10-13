@@ -232,21 +232,30 @@ agent-vault search "postgres connection pool"
 | Command | Arguments / Flags | Description |
 | :--- | :--- | :--- |
 | `agent-vault scan` | None | Scans your local machine for agent session directories across Windows, macOS, and Linux. |
-| `agent-vault build` | `--output, -o <dir>` | Normalizes raw logs into Markdown cards, builds `INDEX.md`, and compiles `graph.json`. |
-| `agent-vault view` | `--dir, -d <dir>` | Opens the standalone interactive `graph.html` visualizer in your default browser. |
-| `agent-vault search` | `<query> [--limit, -l N]` | Fast full-text search across past problems, code diffs, and solutions. |
+| `agent-vault build` | `--output, -o <dir>` | Normalizes raw logs into Markdown cards, builds `INDEX.md`, and compiles knowledge graph via Graphify. |
+| `agent-vault view` | `--dir, -d <dir>` | Opens the interactive 3D `graph.html` visualizer in your default browser. |
+| `agent-vault search` | `<query> [--limit, -l N]` | Instant offline full-text search across past problems, code diffs, and solutions. |
+| `agent-vault show` | `<conv_id> [--open, -o]` | Renders the full unabridged Markdown Dev Card in your terminal, or opens it in your editor. |
+| `agent-vault ask` | `<query> [-p provider] [-m model]` | Ask natural-language questions and synthesize AI answers across your vault. |
 | `agent-vault mcp` | None | Starts the Model Context Protocol (MCP) stdio server for live AI agent integration. |
 
 ---
 
-## 🤖 Connecting to AI Agents (MCP)
+## 🧠 Asking Your Vault: Two Flexible AI Paradigms
 
-Agent-Vault comes with native **Model Context Protocol (MCP)** support. Connecting it allows your AI coding agents to search and recall past solutions on demand.
+Agent-Vault offers two complementary ways to query and synthesize insights across your past sessions:
 
-### Adding to Google Antigravity or Claude Code (`mcp_config.json`):
+### Option 1: Connect to Your Existing AI Agents via MCP (Zero API Cost)
 
-Add the following to your agent's MCP configuration:
+If you already use an AI coding agent or personal assistant, you don't need any extra API keys. Agent-Vault includes native **Model Context Protocol (MCP)** support. Your agent uses its own reasoning engine to search and recall past solutions on demand.
 
+Works out of the box with:
+* **Google Antigravity** (Desktop & CLI)
+* **Claude Code** (Anthropic)
+* **Cursor & Windsurf**
+* **Meta Muse & Personal AI Assistants** (Any assistant supporting MCP stdio connectors)
+
+#### Adding to your agent's MCP config (`mcp_config.json`):
 ```json
 {
   "mcpServers": {
@@ -258,9 +267,36 @@ Add the following to your agent's MCP configuration:
 }
 ```
 
-### Available MCP Tools:
-* **`search_past_solutions(query, limit)`**: Natural-language search across past sessions, returning matching problem cards, dates, and code snippets.
-* **`get_past_solution_details(conversation_id)`**: Retrieves the complete, unabridged Markdown dev card and solution details for any past session.
+#### What you can ask your agent:
+> *"Search my vault: what repeated architectural patterns or attendance features did we build in July?"*
+> *"Have we solved a PostgreSQL connection pool leak before? Show me the exact code we used."*
+
+---
+
+### Option 2: Direct Terminal AI (`agent-vault ask`) (Bring Your Own Key or Local LLM)
+
+Prefer staying inside your terminal without opening an IDE? Run `agent-vault ask` to synthesize answers directly in PowerShell or Bash.
+
+Agent-Vault auto-detects your environment key with **zero external dependencies**:
+
+| Provider | Environment Variable | Default Model | Notes |
+| :--- | :--- | :--- | :--- |
+| **Google Gemini** | `$env:GEMINI_API_KEY` | `gemini-2.0-flash` | Free tier via Google AI Studio |
+| **Groq** | `$env:GROQ_API_KEY` | `llama-3.3-70b-versatile` | Ultra-fast & free tier |
+| **OpenAI** | `$env:OPENAI_API_KEY` | `gpt-4o-mini` | Standard API key |
+| **Anthropic** | `$env:ANTHROPIC_API_KEY` | `claude-3-5-haiku` | Standard API key |
+| **Local Ollama** | Run `ollama serve` | Any local model | **100% Offline, Private, 0 Cost** |
+
+#### Example Usage:
+```bash
+# Windows PowerShell
+$env:GEMINI_API_KEY = "AIzaSy..."
+agent-vault ask "What are the common bug patterns in my React projects?"
+
+# Or specify provider and model on the fly:
+agent-vault ask "Summarize my attendance system design" --provider groq
+agent-vault ask "Explain my database migration strategy" --provider ollama --model qwen2.5-coder
+```
 
 ---
 
