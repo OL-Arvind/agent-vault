@@ -282,7 +282,6 @@ def ask(query, provider, model, key, limit):
 @main.command()
 def mcp():
     """Start the Model Context Protocol (MCP) server for AI agents."""
-    console.print("[bold green]Starting Agent-Vault MCP stdio server...[/bold green]")
     run_mcp_server()
 
 if __name__ == "__main__":

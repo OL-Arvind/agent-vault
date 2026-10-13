@@ -49,10 +49,28 @@ def search_vault(query: str, vault_dir: Path = None, limit: int = 5) -> List[Dic
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:limit]
 
+import sys
+
 def run_mcp_server():
     """Runs standard input/output MCP server for AI agents."""
+    FastMCP = None
     try:
         from mcp.server.fastmcp import FastMCP
+    except ImportError:
+        try:
+            from fastmcp import FastMCP
+        except ImportError:
+            pass
+
+    if FastMCP is None:
+        sys.stderr.write(
+            "Error: MCP Python SDK (v1.x) is not installed.\n"
+            "Install with: pip install 'agent-vault[mcp]' or pip install 'mcp>=1.0.0,<2.0.0'\n"
+        )
+        sys.stderr.flush()
+        sys.exit(1)
+
+    try:
         mcp = FastMCP("agent-vault")
 
         @mcp.tool()
@@ -70,11 +88,11 @@ def run_mcp_server():
         def get_past_solution_details(conversation_id: str) -> str:
             """Retrieve the complete markdown dev card and code solutions for a specific past conversation ID."""
             vault_dir = get_default_vault_dir()
-            clean_id = conversation_id.replace("conv_", "")
+            clean_id = conversation_id.replace("conv_", "").strip().lower()
             fpath = vault_dir / f"conv_{clean_id}.md"
             if not fpath.exists():
                 # Try finding by partial ID
-                matches = list(vault_dir.glob(f"conv_*{clean_id}*.md"))
+                matches = [f for f in vault_dir.glob("conv_*.md") if clean_id in f.stem.lower()]
                 if matches:
                     fpath = matches[0]
                 else:
@@ -82,5 +100,7 @@ def run_mcp_server():
             return fpath.read_text(encoding="utf-8", errors="ignore")
 
         mcp.run()
-    except ImportError:
-        print("MCP SDK not installed. Install with: pip install 'agent-vault[mcp]' or pip install mcp")
+    except Exception as e:
+        sys.stderr.write(f"MCP server runtime error: {e}\n")
+        sys.stderr.flush()
+        sys.exit(1)

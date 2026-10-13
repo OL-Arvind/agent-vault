@@ -128,13 +128,13 @@ Agent-Vault requires at least one supported AI agent surface with past conversat
 This makes `agent-vault` available globally in your terminal without needing to activate virtual environments:
 
 ```bash
-# Install directly from the repository
-uv tool install git+https://github.com/OL-Arvind/agent-vault.git
+# Install directly from the repository with full MCP support
+uv tool install "git+https://github.com/OL-Arvind/agent-vault.git" --with "mcp>=1.0.0,<2.0.0"
 
 # Or install locally after cloning
 git clone https://github.com/OL-Arvind/agent-vault.git
 cd agent-vault
-uv tool install .
+uv tool install ".[all]" --force
 ```
 
 ### Option B: Run Instantly without Installation
@@ -149,9 +149,9 @@ Clone the repository and set up a local editable environment:
 git clone https://github.com/OL-Arvind/agent-vault.git
 cd agent-vault
 
-# 1. Create and install in a local virtual environment (editable mode)
+# 1. Create and install in a local virtual environment (editable mode with all extras)
 uv venv
-uv pip install -e .
+uv pip install -e ".[all]"
 
 # 2. Activate the virtual environment:
 # Windows PowerShell:
@@ -171,10 +171,10 @@ When you pull new commits from GitHub, ensure the installed package updates:
 git pull origin main
 
 # If you installed globally via 'uv tool install':
-uv tool install . --force
+uv tool install ".[all]" --force
 
 # If you use a virtual environment (.venv):
-uv pip install -e .
+uv pip install -e ".[all]"
 ```
 
 ---

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-vault"
-version = "0.1.3"
+version = "0.1.4"
 description = "Turn local AI coding agent sessions into a queryable knowledge graph and searchable second brain."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,11 +33,11 @@ graph = [
     "graphifyy>=0.9.70",
 ]
 mcp = [
-    "mcp>=1.0.0",
+    "mcp>=1.0.0,<2.0.0",
 ]
 all = [
     "graphifyy>=0.9.70",
-    "mcp>=1.0.0",
+    "mcp>=1.0.0,<2.0.0",
 ]
 
 [project.scripts]
