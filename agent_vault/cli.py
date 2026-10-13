@@ -152,16 +152,17 @@ def view(dir):
     webbrowser.open(html_file.resolve().as_uri())
 
 @main.command()
-@click.argument("query")
+@click.argument("query", nargs=-1, required=True)
 @click.option("--limit", "-l", default=5, help="Number of results to show.")
 def search(query, limit):
     """Search past agent solutions by keyword or phrase."""
-    results = search_vault(query, limit=limit)
+    query_str = " ".join(query).strip()
+    results = search_vault(query_str, limit=limit)
     if not results:
-        console.print(f"[yellow]No past solutions found matching '{query}'.[/yellow]")
+        console.print(f"[yellow]No past solutions found matching '{query_str}'.[/yellow]")
         return
 
-    table = Table(title=f"Results for '{query}'", show_header=True, header_style="bold green")
+    table = Table(title=f"Results for '{query_str}'", show_header=True, header_style="bold green")
     table.add_column("Date", style="dim", width=12)
     table.add_column("Conversation Topic")
     table.add_column("Snippet")
