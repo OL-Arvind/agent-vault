@@ -41,6 +41,7 @@ knowledge_vault/
 graphify-out/
 *.db
 .graphify_*
+agent-vault/
 
 # IDE / Editor
 .vscode/

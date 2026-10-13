@@ -132,9 +132,10 @@ def find_graphify_executable() -> Path | None:
 
 def generate_standalone_html(out_dir: Path, nodes: list, edges: list):
     """Generates an embedded interactive D3.js knowledge graph visualizer."""
+    out_dir.mkdir(parents=True, exist_ok=True)
     html_path = out_dir / "graph.html"
     
-    # Cap displayed nodes to 800 for smooth browser rendering if very large
+    # Cap displayed nodes to 1000 for smooth browser rendering if very large
     display_nodes = nodes[:1000]
     node_id_set = {n["id"] for n in display_nodes}
     display_edges = [
@@ -315,9 +316,17 @@ def export_html(vault_dir: Path, out_dir: Path, nodes: list = None, edges: list 
         except Exception:
             pass
 
-    # 2. Always generate standalone interactive D3 HTML visualizer if graph.html is missing
+    # 2. Generate standalone interactive D3 HTML visualizer
     if nodes is not None and edges is not None:
         generate_standalone_html(out_dir, nodes, edges)
+    elif (out_dir / "graph.json").exists():
+        try:
+            raw_data = json.loads((out_dir / "graph.json").read_text(encoding="utf-8"))
+            loaded_nodes = raw_data.get("nodes", [])
+            loaded_edges = raw_data.get("edges", raw_data.get("links", []))
+            generate_standalone_html(out_dir, loaded_nodes, loaded_edges)
+        except Exception:
+            pass
 
 def build_knowledge_graph(vault_dir: Path, out_dir: Path = None) -> Dict[str, Any]:
     """Compiles extracted nodes/edges into graphify-out artifacts."""

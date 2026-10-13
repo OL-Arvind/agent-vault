@@ -115,21 +115,35 @@ def build(output):
         graph_res = build_knowledge_graph(vault_dir)
 
     console.print(f"[bold green][+] Knowledge Graph Compiled![/bold green] ({graph_res.get('nodes', 0)} nodes, {graph_res.get('edges', 0)} edges)")
-    console.print(f"\n[cyan]Tip: Run [bold]agent-vault view[/bold] to open your interactive 3D graph in the browser.[/cyan]")
+    html_file = vault_dir / "graphify-out" / "graph.html"
+    if html_file.exists():
+        console.print(f"[green][+] Interactive visualizer saved:[/green] [cyan]{html_file}[/cyan]")
+    console.print(f"\n[cyan]Tip: Run [bold]agent-vault view[/bold] to open your interactive graph in the browser.[/cyan]")
 
 @main.command()
 @click.option("--dir", "-d", type=click.Path(), default=None, help="Vault directory.")
 def view(dir):
     """Open the interactive graph.html visualizer in your default browser."""
     vault_dir = Path(dir) if dir else get_default_vault_dir()
-    html_file = vault_dir / "graphify-out" / "graph.html"
+    out_dir = vault_dir / "graphify-out"
+    html_file = out_dir / "graph.html"
+
     if not html_file.exists():
-        console.print(f"[red]graph.html not found in {vault_dir}/graphify-out.[/red]")
-        console.print("Run 'agent-vault build' first to compile the graph.")
+        # Auto-heal: Check if vault exists and build visualizer on the fly
+        if (out_dir / "graph.json").exists() or any(vault_dir.glob("conv_*.md")):
+            console.print("[yellow]graph.html not found, generating visualizer from existing vault data...[/yellow]")
+            build_knowledge_graph(vault_dir, out_dir)
+        else:
+            console.print(f"[red]No vault data found in {vault_dir}.[/red]")
+            console.print("Run 'agent-vault build' first to extract your sessions and compile the graph.")
+            return
+
+    if not html_file.exists():
+        console.print(f"[red]Could not locate or generate {html_file}. Please run 'agent-vault build'.[/red]")
         return
 
     console.print(f"[green]Opening Knowledge Graph in your browser:[/green] [cyan]{html_file}[/cyan]")
-    webbrowser.open(f"file://{html_file.resolve()}")
+    webbrowser.open(html_file.resolve().as_uri())
 
 @main.command()
 @click.argument("query")

@@ -139,7 +139,7 @@ Clone the repository and set up a local editable environment:
 git clone https://github.com/OL-Arvind/agent-vault.git
 cd agent-vault
 
-# 1. Create and install in a local virtual environment
+# 1. Create and install in a local virtual environment (editable mode)
 uv venv
 uv pip install -e .
 
@@ -153,6 +153,18 @@ source .venv/bin/activate
 
 # (Alternative) Run without activating by prefixing with 'uv run':
 # uv run agent-vault scan
+```
+
+### 🔄 Updating to the Latest Version
+When you pull new commits from GitHub, ensure the installed package updates:
+```bash
+git pull origin main
+
+# If you installed globally via 'uv tool install':
+uv tool install . --force
+
+# If you use a virtual environment (.venv):
+uv pip install -e .
 ```
 
 ---
