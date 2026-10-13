@@ -132,7 +132,7 @@ pip install agent-vault
 ### Option C: Developer / Source Install
 Clone the repository and install in editable mode:
 ```bash
-git clone https://github.com/arvin/agent-vault.git
+git clone https://github.com/OL-Arvind/agent-vault.git
 cd agent-vault
 uv venv
 uv pip install -e .
