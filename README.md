@@ -114,38 +114,58 @@ Agent-Vault requires at least one supported AI agent surface with past conversat
 
 ## 📦 Installation
 
-### Option A: Via `uv` (Recommended)
-Run without installation:
+### Option A: Install Globally as a CLI Tool (Recommended)
+This makes `agent-vault` available globally in your terminal without needing to activate virtual environments:
+
 ```bash
-uvx agent-vault --help
-```
-Or install globally as a tool:
-```bash
-uv tool install agent-vault
+# Install directly from the repository
+uv tool install git+https://github.com/OL-Arvind/agent-vault.git
+
+# Or install locally after cloning
+git clone https://github.com/OL-Arvind/agent-vault.git
+cd agent-vault
+uv tool install .
 ```
 
-### Option B: Via `pip`
+### Option B: Run Instantly without Installation
+Run any command on-the-fly via `uvx`:
 ```bash
-pip install agent-vault
+uvx --from git+https://github.com/OL-Arvind/agent-vault.git agent-vault scan
 ```
 
-### Option C: Developer / Source Install
-Clone the repository and install in editable mode:
+### Option C: Developer / Virtual Environment Install
+Clone the repository and set up a local editable environment:
 ```bash
 git clone https://github.com/OL-Arvind/agent-vault.git
 cd agent-vault
+
+# 1. Create and install in a local virtual environment
 uv venv
 uv pip install -e .
+
+# 2. Activate the virtual environment:
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# Windows Command Prompt:
+.venv\Scripts\activate.bat
+# macOS / Linux:
+source .venv/bin/activate
+
+# (Alternative) Run without activating by prefixing with 'uv run':
+# uv run agent-vault scan
 ```
 
 ---
 
 ## 🚀 Quickstart Guide
 
+> **💡 Note for Virtual Environment Users:** If you used Option C and haven't activated `.venv`, prefix commands with `uv run` (e.g. `uv run agent-vault scan`). If you installed globally via `uv tool install`, you can run `agent-vault` directly anywhere.
+
 ### Step 1: Scan Your System
 Verify that Agent-Vault detects your agent sessions:
 ```bash
 agent-vault scan
+# or: uv run agent-vault scan
 ```
 **Example output:**
 ```
