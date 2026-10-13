@@ -13,7 +13,16 @@ from agent_vault.graph import build_knowledge_graph
 from agent_vault.mcp_server import search_vault, run_mcp_server
 from agent_vault import __version__
 
-console = Console(highlight=False)
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+console = Console(highlight=False, legacy_windows=False)
 
 @click.group()
 @click.version_option(__version__, prog_name="agent-vault")
@@ -163,14 +172,48 @@ def search(query, limit):
         return
 
     table = Table(title=f"Results for '{query_str}'", show_header=True, header_style="bold green")
+    table.add_column("ID", style="bold cyan", width=10)
     table.add_column("Date", style="dim", width=12)
-    table.add_column("Conversation Topic")
+    table.add_column("Conversation Topic", width=36)
     table.add_column("Snippet")
 
     for r in results:
-        table.add_row(r["date"][:10], r["title"][:50], r["snippet"][:100] + "...")
+        table.add_row(r["conversation_id"][:8], r["date"][:10], r["title"][:34], r["snippet"][:100] + "...")
 
     console.print(table)
+    console.print("\n[dim]Tip: Run [bold cyan]agent-vault show <ID>[/bold cyan] to view the full dev card & code solution.[/dim]")
+
+@main.command()
+@click.argument("conv_id")
+@click.option("--open", "-o", "open_editor", is_flag=True, help="Open dev card file in your default system editor.")
+def show(conv_id, open_editor):
+    """View the full Markdown dev card and code solution for a conversation ID."""
+    vault_dir = get_default_vault_dir()
+    clean_id = conv_id.replace("conv_", "").strip().lower()
+    
+    # Try exact match or partial match
+    target = vault_dir / f"conv_{clean_id}.md"
+    if not target.exists():
+        matches = [f for f in vault_dir.glob("conv_*.md") if clean_id in f.stem.lower()]
+        if matches:
+            target = matches[0]
+        else:
+            console.print(f"[red]No dev card found matching ID '{conv_id}' in {vault_dir}[/red]")
+            return
+
+    if open_editor:
+        import subprocess
+        console.print(f"[green]Opening dev card:[/green] [cyan]{target}[/cyan]")
+        if sys.platform == "win32":
+            os.startfile(str(target))
+        else:
+            subprocess.run(["xdg-open" if sys.platform != "darwin" else "open", str(target)])
+        return
+
+    from rich.markdown import Markdown
+    md_text = target.read_text(encoding="utf-8", errors="ignore")
+    console.print(Panel(f"[bold cyan]Dev Card:[/bold cyan] {target.name}\n[dim]Path: {target}[/dim]", border_style="cyan"))
+    console.print(Markdown(md_text))
 
 @main.command()
 def mcp():
