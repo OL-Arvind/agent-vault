@@ -7,7 +7,7 @@
 [![Architecture: 100% Local](https://img.shields.io/badge/privacy-100%25%20local-success.svg)]()
 [![Supports: Antigravity](https://img.shields.io/badge/agents-Google%20Antigravity-orange.svg)]()
 [![Platform: Win | macOS | Linux](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
-[![M8ven Score](https://m8ven.ai/badge/mcp/ol-arvind/agent-vault?variant=verified)](https://m8ven.ai/mcp/ol-arvind/agent-vault)
+[![M8ven Score](https://m8ven.ai/badge/mcp/ol-arvind-agent-vault-1761lj?v=4d4f72f612c976be4c50c81c6ab240ba)](https://m8ven.ai/mcp/ol-arvind-agent-vault-1761lj?s=readme)
 
 ---
 
