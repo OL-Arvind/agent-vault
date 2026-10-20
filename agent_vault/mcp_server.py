@@ -51,8 +51,16 @@ def search_vault(query: str, vault_dir: Path = None, limit: int = 5) -> List[Dic
 
 import sys
 
-def run_mcp_server():
-    """Runs standard input/output MCP server for AI agents."""
+# Standard MCP tool annotations declaring behavior hints for AI clients
+READ_ONLY_TOOL_ANNOTATIONS = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
+def create_mcp_server():
+    """Initializes and configures the FastMCP server with annotated tools."""
     FastMCP = None
     try:
         from mcp.server.fastmcp import FastMCP
@@ -63,6 +71,57 @@ def run_mcp_server():
             pass
 
     if FastMCP is None:
+        return None
+
+    mcp = FastMCP("agent-vault")
+
+    @mcp.tool(
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        }
+    )
+    def search_past_solutions(query: str, limit: int = 5) -> str:
+        """Search your past engineering conversations and agent solutions by keyword or topic."""
+        res = search_vault(query, limit=limit)
+        if not res:
+            return f"No past sessions found matching: '{query}'"
+        out = []
+        for r in res:
+            out.append(f"### [{r['date'][:10]}] {r['title']}\nID: `{r['conversation_id']}`\nSnippet: {r['snippet']}\nPath: {r['file_path']}\n")
+        return "\n---\n".join(out)
+
+    @mcp.tool(
+        annotations={
+            "readOnlyHint": True,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        }
+    )
+    def get_past_solution_details(conversation_id: str) -> str:
+        """Retrieve the complete markdown dev card and code solutions for a specific past conversation ID."""
+        vault_dir = get_default_vault_dir()
+        clean_id = conversation_id.replace("conv_", "").strip().lower()
+        fpath = vault_dir / f"conv_{clean_id}.md"
+        if not fpath.exists():
+            # Try finding by partial ID
+            matches = [f for f in vault_dir.glob("conv_*.md") if clean_id in f.stem.lower()]
+            if matches:
+                fpath = matches[0]
+            else:
+                return f"Conversation '{conversation_id}' not found in vault."
+        return fpath.read_text(encoding="utf-8", errors="ignore")
+
+    return mcp
+
+def run_mcp_server():
+    """Runs standard input/output MCP server for AI agents."""
+    mcp = create_mcp_server()
+
+    if mcp is None:
         sys.stderr.write(
             "Error: MCP Python SDK (v1.x) is not installed.\n"
             "Install with: pip install 'agent-vault[mcp]' or pip install 'mcp>=1.0.0,<2.0.0'\n"
@@ -71,36 +130,9 @@ def run_mcp_server():
         sys.exit(1)
 
     try:
-        mcp = FastMCP("agent-vault")
-
-        @mcp.tool()
-        def search_past_solutions(query: str, limit: int = 5) -> str:
-            """Search your past engineering conversations and agent solutions by keyword or topic."""
-            res = search_vault(query, limit=limit)
-            if not res:
-                return f"No past sessions found matching: '{query}'"
-            out = []
-            for r in res:
-                out.append(f"### [{r['date'][:10]}] {r['title']}\nID: `{r['conversation_id']}`\nSnippet: {r['snippet']}\nPath: {r['file_path']}\n")
-            return "\n---\n".join(out)
-
-        @mcp.tool()
-        def get_past_solution_details(conversation_id: str) -> str:
-            """Retrieve the complete markdown dev card and code solutions for a specific past conversation ID."""
-            vault_dir = get_default_vault_dir()
-            clean_id = conversation_id.replace("conv_", "").strip().lower()
-            fpath = vault_dir / f"conv_{clean_id}.md"
-            if not fpath.exists():
-                # Try finding by partial ID
-                matches = [f for f in vault_dir.glob("conv_*.md") if clean_id in f.stem.lower()]
-                if matches:
-                    fpath = matches[0]
-                else:
-                    return f"Conversation '{conversation_id}' not found in vault."
-            return fpath.read_text(encoding="utf-8", errors="ignore")
-
         mcp.run()
     except Exception as e:
         sys.stderr.write(f"MCP server runtime error: {e}\n")
         sys.stderr.flush()
         sys.exit(1)
+

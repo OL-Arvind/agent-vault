@@ -35,9 +35,13 @@ graph = [
 mcp = [
     "mcp>=1.0.0,<2.0.0",
 ]
+test = [
+    "pytest>=7.0.0",
+]
 all = [
     "graphifyy>=0.9.70",
     "mcp>=1.0.0,<2.0.0",
+    "pytest>=7.0.0",
 ]
 
 [project.scripts]
